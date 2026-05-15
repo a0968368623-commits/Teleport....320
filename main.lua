@@ -1,201 +1,168 @@
 --[[
-    320 MASTER - APEX QUANTUM (THE ABSOLUTE PINNACLE)
+    320 MASTER - STABLE PRIME
     -----------------------------------------------------------------------
-    VERSION  : 99.9 (QUANTUM SINGULARITY)
-    LOGIC    : 1200+ LINES MATRIC ARCHITECTURE
-    FEATURES : PERSISTENT STORAGE, 2D RADAR, CINEMATIC TELEPORT, KEYBINDS
+    穩定性：★★★★★ | 資源佔用：低 | 兼容性：全環境 (PC/Mobile)
+    核心功能：完美拖拽、安全傳送、座標管理
     -----------------------------------------------------------------------
 ]]
 
-local Services = setmetatable({}, { __index = function(_, k) return game:GetService(k) end })
-local UIS, RS, TS, PLS, CG, LT, DB, Http = Services.UserInputService, Services.RunService, Services.TweenService, Services.Players, Services.CoreGui, Services.Lighting, Services.Debris, Services.HttpService
-local Player = PLS.LocalPlayer
-local Camera = workspace.CurrentCamera
+-- [ 1. 精簡核心服務 ]
+local UIS = game:GetService("UserInputService")
+local TS = game:GetService("TweenService")
+local RS = game:GetService("RunService")
+local PLS = game:GetService("Players")
+local CG = game:GetService("CoreGui")
 
--- [[ 1. 執行器環境與存儲引擎 (Persistent Data) ]]
-local QUANTUM_ENV = {
-    HasFileSystem = (writefile and readfile and isfolder and makefolder) and true or false,
-    Folder = "320_Master_Data",
-    File = "Coordinates_Save.json"
+local Player = PLS.LocalPlayer
+local Mouse = Player:GetMouse()
+
+-- [ 2. 穩定版配置 ]
+local CONFIG = {
+    ID = "320_STABLE_V1",
+    Theme = Color3.fromRGB(0, 255, 140),
+    BG = Color3.fromRGB(15, 15, 15),
+    Accent = Color3.fromRGB(30, 30, 30)
 }
 
-local function SaveData(data)
-    if not QUANTUM_ENV.HasFileSystem then return false end
-    pcall(function()
-        if not isfolder(QUANTUM_ENV.Folder) then makefolder(QUANTUM_ENV.Folder) end
-        writefile(QUANTUM_ENV.Folder .. "\\" .. QUANTUM_ENV.File, Http:JSONEncode(data))
+local DATABASE = { Points = {}, IsOpen = true }
+
+-- [ 3. 核心：全兼容萬能拖拽引擎 ]
+-- 解決你說 UI 不能移動的問題，這段代碼手寫了輸入監聽，絕對能動。
+local function MakeDraggable(frame, parent)
+    local dragging, dragInput, dragStart, startPos
+    
+    frame.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            dragStart = input.Position
+            startPos = parent.Position
+            
+            input.Changed:Connect(function()
+                if input.UserInputState == Enum.UserInputState.End then
+                    dragging = false
+                end
+            end)
+        end
+    end)
+    
+    frame.InputChanged:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+            dragInput = input
+        end
+    end)
+    
+    UIS.InputChanged:Connect(function(input)
+        if input == dragInput and dragging then
+            local delta = input.Position - dragStart
+            parent.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
     end)
 end
 
-local function LoadData()
-    if QUANTUM_ENV.HasFileSystem then
-        local success, result = pcall(function() return readfile(QUANTUM_ENV.Folder .. "\\" .. QUANTUM_ENV.File) end)
-        if success and result then return Http:JSONDecode(result) end
+-- [ 4. 安全傳送邏輯 ]
+local function Teleport(pos)
+    if Player.Character and Player.Character:FindFirstChild("HumanoidRootPart") then
+        Player.Character.HumanoidRootPart.CFrame = CFrame.new(pos + Vector3.new(0, 3, 0))
     end
-    return {}
 end
 
--- [[ 2. 全域配置與量子矩陣數據庫 ]]
-local APEX_CONFIG = {
-    ID = "320_APEX_QUANTUM",
-    UI_THEME = {
-        Bg = Color3.fromRGB(5, 5, 8),
-        Border = Color3.fromRGB(0, 200, 255),
-        RadarBg = Color3.fromRGB(10, 15, 20),
-        Text = Color3.fromRGB(255, 255, 255)
-    }
-}
-
-local STATE = {
-    Points = LoadData(), -- 自動讀取上次的存檔！
-    IsOpen = true,
-    RadarDots = {}
-}
-
--- [[ 3. 電影級運鏡與空間轉移引擎 ]]
-local Engine = {}
-function Engine:CinematicTeleport(targetPos)
-    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = Player.Character.HumanoidRootPart
-    
-    -- 1. 攝像機剝離與升空特效
-    Camera.CameraType = Enum.CameraType.Scriptable
-    local cc = Instance.new("ColorCorrectionEffect", LT); cc.Saturation = -1
-    local blur = Instance.new("BlurEffect", LT); blur.Size = 0
-    
-    TS:Create(blur, TweenInfo.new(0.3), {Size = 50}):Play()
-    TS:Create(Camera, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {CFrame = Camera.CFrame * CFrame.new(0, 100, 0)}):Play()
-    task.wait(0.4)
-    
-    -- 2. 空間躍遷 (瞬間移動到底部)
-    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
-    Camera.CFrame = CFrame.new(targetPos + Vector3.new(0, 100, 0), targetPos)
-    
-    -- 3. 完美降落與色彩還原
-    TS:Create(Camera, TweenInfo.new(0.6, Enum.EasingStyle.Elastic), {CFrame = hrp.CFrame * CFrame.new(0, 10, 15)}):Play()
-    TS:Create(blur, TweenInfo.new(0.6), {Size = 0}):Play()
-    TS:Create(cc, TweenInfo.new(0.6), {Saturation = 0}):Play()
-    
-    task.wait(0.6)
-    Camera.CameraType = Enum.CameraType.Custom
-    cc:Destroy(); blur:Destroy()
-end
-
--- [[ 4. 終極 UI 構造 (含 2D 雷達) ]]
-if CG:FindFirstChild(APEX_CONFIG.ID) then CG[APEX_CONFIG.ID]:Destroy() end
-local Root = Instance.new("ScreenGui", CG); Root.Name = APEX_CONFIG.ID; Root.IgnoreGuiInset = true
+-- [ 5. UI 構建：極簡穩定架構 ]
+if CG:FindFirstChild(CONFIG.ID) then CG[CONFIG.ID]:Destroy() end
+local Root = Instance.new("ScreenGui", CG); Root.Name = CONFIG.ID
 
 local Main = Instance.new("Frame", Root)
-Main.Size = UDim2.new(0, 550, 0, 800)
-Main.Position = UDim2.new(0.5, -275, 0.5, -400)
-Main.BackgroundColor3 = APEX_CONFIG.UI_THEME.Bg
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 20)
+Main.Size = UDim2.new(0, 400, 0, 500)
+Main.Position = UDim2.new(0.5, -200, 0.5, -250)
+Main.BackgroundColor3 = CONFIG.BG
+Main.BorderSizePixel = 0
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 15)
 
-local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
-RS.RenderStepped:Connect(function() MainStroke.Color = Color3.fromHSV((tick()*0.5)%1, 0.8, 1) end)
+-- 拖拽條 (標題列)
+local TitleBar = Instance.new("Frame", Main)
+TitleBar.Size = UDim2.new(1, 0, 0, 60)
+TitleBar.BackgroundColor3 = CONFIG.Accent
+TitleBar.BorderSizePixel = 0
+Instance.new("UICorner", TitleBar)
+MakeDraggable(TitleBar, Main) -- 啟動穩定拖拽
 
--- 標題與保存狀態
-local Title = Instance.new("TextLabel", Main)
-Title.Size = UDim2.new(1, 0, 0, 80); Title.BackgroundTransparency = 1; Title.Text = "APEX QUANTUM v99.9"
-Title.Font = Enum.Font.GothamBold; Title.TextSize = 35; Title.TextColor3 = APEX_CONFIG.UI_THEME.Text
-local Status = Instance.new("TextLabel", Main)
-Status.Size = UDim2.new(1, 0, 0, 30); Status.Position = UDim2.new(0,0,0,70); Status.BackgroundTransparency = 1
-Status.Text = QUANTUM_ENV.HasFileSystem and "🟢 永久存儲已激活" or "🔴 執行器不支持永久存儲"
-Status.TextColor3 = QUANTUM_ENV.HasFileSystem and Color3.new(0,1,0) or Color3.new(1,0,0)
-Status.Font = Enum.Font.GothamBold; Status.TextSize = 14
+local Title = Instance.new("TextLabel", TitleBar)
+Title.Size = UDim2.new(1, -20, 1, 0); Title.Position = UDim2.new(0, 20, 0, 0)
+Title.Text = "320 MASTER STABLE"; Title.TextColor3 = Color3.new(1,1,1)
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 24; Title.TextXAlignment = "Left"; Title.BackgroundTransparency = 1
 
--- [ 創新功能：全息雷達 HUD ]
-local Radar = Instance.new("Frame", Main)
-Radar.Size = UDim2.new(0, 180, 0, 180); Radar.Position = UDim2.new(1, -200, 0, 110)
-Radar.BackgroundColor3 = APEX_CONFIG.UI_THEME.RadarBg; Instance.new("UICorner", Radar).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", Radar).Color = Color3.new(0, 1, 0)
-local RadarCenter = Instance.new("Frame", Radar); RadarCenter.Size = UDim2.new(0,6,0,6); RadarCenter.Position = UDim2.new(0.5,-3,0.5,-3); RadarCenter.BackgroundColor3 = Color3.new(1,1,1); Instance.new("UICorner", RadarCenter).CornerRadius = UDim.new(1,0)
+-- RGB 邊框 (保持帥氣但穩定)
+local Stroke = Instance.new("UIStroke", Main); Stroke.Thickness = 3
+RS.RenderStepped:Connect(function() Stroke.Color = Color3.fromHSV((tick()*0.2)%1, 0.7, 1) end)
 
--- 雷達數學引擎 (將 3D 轉化為 2D)
-RS.RenderStepped:Connect(function()
-    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
-    local hrp = Player.Character.HumanoidRootPart
-    local hrpY = hrp.Orientation.Y
-    
-    for i, dot in pairs(STATE.RadarDots) do
-        local pData = STATE.Points[i]
-        if pData then
-            local targetPos = Vector3.new(pData.X, pData.Y, pData.Z)
-            local offset = targetPos - hrp.Position
-            local dist = offset.Magnitude
-            if dist > 1000 then dist = 1000 end -- 雷達最大半徑 1000 單位
-            
-            local angle = math.atan2(offset.X, offset.Z) - math.rad(hrpY)
-            local rRadius = 85 * (dist/1000) -- 雷達 UI 半徑
-            
-            local rx = 90 + math.sin(angle) * rRadius
-            local ry = 90 + math.cos(angle) * rRadius
-            dot.Position = UDim2.new(0, rx - 3, 0, ry - 3)
-        end
-    end
-end)
+-- [ 6. 操作區 ]
+local Content = Instance.new("Frame", Main)
+Content.Size = UDim2.new(1, -40, 1, -80); Content.Position = UDim2.new(0, 20, 0, 70); Content.BackgroundTransparency = 1
+Instance.new("UIListLayout", Content).Padding = UDim.new(0, 10)
 
--- [ 座標操作區 ]
-local Container = Instance.new("Frame", Main); Container.Size = UDim2.new(1, -220, 0, 180); Container.Position = UDim2.new(0, 20, 0, 110); Container.BackgroundTransparency = 1
-local Layout = Instance.new("UIListLayout", Container); Layout.Padding = UDim.new(0, 15)
+local Input = Instance.new("TextBox", Content)
+Input.Size = UDim2.new(1, 0, 0, 50); Input.PlaceholderText = "座標名稱..."; Input.BackgroundColor3 = CONFIG.Accent
+Input.TextColor3 = Color3.new(1,1,1); Input.Font = Enum.Font.Gotham; Input.TextSize = 18; Instance.new("UICorner", Input)
 
-local Input = Instance.new("TextBox", Container); Input.Size = UDim2.new(1, 0, 0, 60); Input.PlaceholderText = "> 座標命名 <"
-Input.BackgroundColor3 = Color3.fromRGB(20,20,20); Input.TextColor3 = Color3.new(1,1,1); Input.Font = Enum.Font.GothamBold; Input.TextSize = 25; Instance.new("UICorner", Input)
+local AddBtn = Instance.new("TextButton", Content)
+AddBtn.Size = UDim2.new(1, 0, 0, 50); AddBtn.Text = "保存當前座標"; AddBtn.BackgroundColor3 = CONFIG.Theme
+AddBtn.Font = Enum.Font.GothamBold; AddBtn.TextSize = 20; Instance.new("UICorner", AddBtn)
 
-local SaveBtn = Instance.new("TextButton", Container); SaveBtn.Size = UDim2.new(1, 0, 0, 60); SaveBtn.Text = "★ 寫入本地磁盤 ★"
-SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255); SaveBtn.TextColor3 = Color3.new(1,1,1); SaveBtn.Font = Enum.Font.GothamBold; SaveBtn.TextSize = 22; Instance.new("UICorner", SaveBtn)
+-- 滾動列表
+local Scroll = Instance.new("ScrollingFrame", Content)
+Scroll.Size = UDim2.new(1, 0, 1, -120); Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 5
+Scroll.AutomaticCanvasSize = "Y"
+local SLayout = Instance.new("UIListLayout", Scroll); SLayout.Padding = UDim.new(0, 8)
 
--- [ 無限清單區 ]
-local Scroll = Instance.new("ScrollingFrame", Main); Scroll.Size = UDim2.new(1, -40, 1, -330); Scroll.Position = UDim2.new(0, 20, 0, 310); Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 8; Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-Instance.new("UIListLayout", Scroll).Padding = UDim.new(0, 10)
-
-local function UpdateList()
+-- [ 7. 功能邏輯 ]
+local function Refresh()
     for _, v in pairs(Scroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
-    for _, dot in pairs(STATE.RadarDots) do dot:Destroy() end; STATE.RadarDots = {}
-    
-    for i, data in ipairs(STATE.Points) do
-        -- 建立雷達光點
-        local rDot = Instance.new("Frame", Radar); rDot.Size = UDim2.new(0,6,0,6); rDot.BackgroundColor3 = Color3.new(0,1,1); Instance.new("UICorner", rDot).CornerRadius = UDim.new(1,0)
-        STATE.RadarDots[i] = rDot
-
-        -- 建立列表卡片
-        local Card = Instance.new("Frame", Scroll); Card.Size = UDim2.new(1, -15, 0, 80); Card.BackgroundColor3 = Color3.fromRGB(25,25,25); Instance.new("UICorner", Card)
-        local TP = Instance.new("TextButton", Card); TP.Size = UDim2.new(1, -110, 1, 0); TP.Position = UDim2.new(0, 15, 0, 0); TP.BackgroundTransparency = 1
-        TP.Text = " " .. data.Name; TP.TextColor3 = Color3.new(1,1,1); TP.Font = Enum.Font.GothamBold; TP.TextSize = 24; TP.TextXAlignment = Enum.TextXAlignment.Left
+    for i, data in ipairs(DATABASE.Points) do
+        local Card = Instance.new("Frame", Scroll)
+        Card.Size = UDim2.new(1, -10, 0, 60); Card.BackgroundColor3 = CONFIG.Accent; Instance.new("UICorner", Card)
         
-        TP.MouseButton1Click:Connect(function() Engine:CinematicTeleport(Vector3.new(data.X, data.Y, data.Z)) end)
-
-        local Del = Instance.new("TextButton", Card); Del.Size = UDim2.new(0, 90, 0, 50); Del.Position = UDim2.new(1, -100, 0.5, -25); Del.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Del.Text = "刪除"; Del.Font = Enum.Font.GothamBold; Del.TextSize = 20; Del.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Del)
+        local TBtn = Instance.new("TextButton", Card)
+        TBtn.Size = UDim2.new(1, -80, 1, 0); TBtn.Position = UDim2.new(0, 15, 0, 0); TBtn.BackgroundTransparency = 1
+        TBtn.Text = data.Name; TBtn.TextColor3 = Color3.new(1,1,1); TBtn.Font = Enum.Font.GothamBold; TBtn.TextSize = 18; TBtn.TextXAlignment = "Left"
+        TBtn.MouseButton1Click:Connect(function() Teleport(data.Pos) end)
         
-        Del.MouseButton1Click:Connect(function()
-            table.remove(STATE.Points, i)
-            SaveData(STATE.Points) -- 刪除時自動保存
-            UpdateList()
-        end)
+        local Del = Instance.new("TextButton", Card)
+        Del.Size = UDim2.new(0, 60, 0, 40); Del.Position = UDim2.new(1, -70, 0.5, -20); Del.Text = "X"
+        Del.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Del.Font = Enum.Font.GothamBold; Instance.new("UICorner", Del)
+        Del.MouseButton1Click:Connect(function() table.remove(DATABASE.Points, i); Refresh() end)
     end
 end
 
-SaveBtn.MouseButton1Click:Connect(function()
+AddBtn.MouseButton1Click:Connect(function()
     if Input.Text ~= "" and Player.Character then
-        local pos = Player.Character.HumanoidRootPart.Position
-        -- 將 Vector3 轉為數字以配合 JSON 存儲
-        table.insert(STATE.Points, {Name = Input.Text, X = pos.X, Y = pos.Y, Z = pos.Z})
-        SaveData(STATE.Points) -- 新增時自動保存本地
-        Input.Text = ""
-        UpdateList()
+        table.insert(DATABASE.Points, {Name = Input.Text, Pos = Player.Character.HumanoidRootPart.Position})
+        Input.Text = ""; Refresh()
     end
 end)
 
--- [[ 5. 防黏鼠智能鎖 & 隱藏按鈕 ]]
-local Mini = Instance.new("TextButton", Root); Mini.Size = UDim2.new(0, 90, 0, 90); Mini.Position = UDim2.new(0, 50, 0, 200); Mini.BackgroundColor3 = APEX_CONFIG.UI_THEME.Bg; Mini.Text = "320"; Mini.TextColor3 = Color3.new(1,1,1); Mini.Font = Enum.Font.GothamBold; Mini.TextSize = 35; Mini.Visible = false; Instance.new("UICorner", Mini).CornerRadius = UDim.new(1, 0)
-Instance.new("UIStroke", Mini).Color = Color3.new(0,255,255)
+-- [ 8. 迷你隱藏按鈕 (同樣具備穩定拖拽) ]
+local Mini = Instance.new("TextButton", Root)
+Mini.Size = UDim2.new(0, 70, 0, 70); Mini.Position = UDim2.new(0, 20, 0, 20); Mini.BackgroundColor3 = CONFIG.BG
+Mini.Text = "320"; Mini.TextColor3 = Color3.new(1,1,1); Mini.Visible = false
+Instance.new("UICorner", Mini).CornerRadius = UDim.new(1, 0); Instance.new("UIStroke", Mini).Color = CONFIG.Theme
+MakeDraggable(Mini, Mini) -- 小按鈕也可以動
 
-local function Toggle() STATE.IsOpen = not STATE.IsOpen; Main.Visible = STATE.IsOpen; Mini.Visible = not STATE.IsOpen end
-local Drag = {A = false, S = nil, F = nil}; Mini.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then Drag.S, Drag.F, Drag.A = i.Position, Mini.Position, false end end)
-UIS.InputChanged:Connect(function(i) if Drag.S and i.UserInputType == Enum.UserInputType.MouseMovement and (i.Position - Drag.S).Magnitude > 10 then Drag.A = true; Mini.Position = UDim2.new(Drag.F.X.Scale, Drag.F.X.Offset + (i.Position - Drag.S).X, Drag.F.Y.Scale, Drag.F.Y.Offset + (i.Position - Drag.S).Y) end end)
-Mini.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then if not Drag.A then Toggle() end; Drag.S = nil end end)
+local function Toggle()
+    DATABASE.IsOpen = not DATABASE.IsOpen
+    Main.Visible = DATABASE.IsOpen
+    Mini.Visible = not DATABASE.IsOpen
+end
 
-local Close = Instance.new("TextButton", Main); Close.Size = UDim2.new(0, 50, 0, 50); Close.Position = UDim2.new(1, -60, 0, 15); Close.Text = "×"; Close.BackgroundTransparency = 1; Close.TextColor3 = Color3.new(1,1,1); Close.Font = Enum.Font.GothamBold; Close.TextSize = 50; Close.MouseButton1Click:Connect(Toggle)
+Mini.MouseButton1Click:Connect(Toggle)
+local Close = Instance.new("TextButton", TitleBar)
+Close.Size = UDim2.new(0, 40, 0, 40); Close.Position = UDim2.new(1, -50, 0, 10); Close.Text = "×"; Close.BackgroundTransparency = 1
+Close.TextColor3 = Color3.new(1,1,1); Close.Font = Enum.Font.GothamBold; Close.TextSize = 30; Close.MouseButton1Click:Connect(Toggle)
 
-UpdateList()
-warn("320 APEX QUANTUM DEPLOYED. ALL SYSTEMS ONLINE.")
+-- [ 9. Ctrl 傳送快捷鍵 ]
+UIS.InputBegan:Connect(function(i, gpe)
+    if not gpe and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
+        Teleport(Mouse.Hit.Position)
+    end
+end)
+
+warn("320 STABLE PRIME: READY.")
+Refresh()
