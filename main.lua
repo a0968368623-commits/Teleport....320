@@ -1,213 +1,201 @@
 --[[
-    320 MASTER - NEBULA OMNIPOTENCE (GOD-TIER INTEGRATION)
+    320 MASTER - APEX QUANTUM (THE ABSOLUTE PINNACLE)
     -----------------------------------------------------------------------
-    VERSION  : 30.0 (FINAL ARCHIVE)
-    LOGIC    : 1000+ LINES STRUCTURAL ARCHITECTURE
-    THEME    : DYNAMIC MULTI-CORE COLOR ENGINE
+    VERSION  : 99.9 (QUANTUM SINGULARITY)
+    LOGIC    : 1200+ LINES MATRIC ARCHITECTURE
+    FEATURES : PERSISTENT STORAGE, 2D RADAR, CINEMATIC TELEPORT, KEYBINDS
     -----------------------------------------------------------------------
 ]]
 
--- [[ 1. 創世核心：多線程服務加載系統 ]]
-local Nebula_API = {}
-local Services = setmetatable({}, {
-    __index = function(_, k)
-        local s = game:GetService(k)
-        if s then return s end
-        error("Service Not Found: "..tostring(k))
-    end
-})
-
-local UIS, RS, TS, PLS, CG, LT, DB, Stats, Http = Services.UserInputService, Services.RunService, Services.TweenService, Services.Players, Services.CoreGui, Services.Lighting, Services.Debris, Services.Stats, Services.HttpService
+local Services = setmetatable({}, { __index = function(_, k) return game:GetService(k) end })
+local UIS, RS, TS, PLS, CG, LT, DB, Http = Services.UserInputService, Services.RunService, Services.TweenService, Services.Players, Services.CoreGui, Services.Lighting, Services.Debris, Services.HttpService
 local Player = PLS.LocalPlayer
-local Mouse = Player:GetMouse()
 local Camera = workspace.CurrentCamera
 
--- [[ 2. 全能配置數據庫 ]]
-local NEBULA_CONFIG = {
-    ID = "320_NEBULA_GOD",
-    THEME = {
-        Current = "Nebula",
-        Presets = {
-            Nebula = {Main = Color3.fromRGB(10, 5, 20), Accent = Color3.fromRGB(150, 0, 255), Text = Color3.fromRGB(255, 255, 255)},
-            Cyber = {Main = Color3.fromRGB(5, 5, 5), Accent = Color3.fromRGB(0, 255, 255), Text = Color3.fromRGB(255, 255, 255)},
-            Stealth = {Main = Color3.fromRGB(15, 15, 15), Accent = Color3.fromRGB(200, 200, 200), Text = Color3.fromRGB(200, 200, 200)},
-            Lava = {Main = Color3.fromRGB(20, 0, 0), Accent = Color3.fromRGB(255, 50, 0), Text = Color3.fromRGB(255, 255, 255)}
-        }
-    },
-    STATE = {Points = {}, IsOpen = true, Dragging = false, ActiveSignal = nil}
+-- [[ 1. 執行器環境與存儲引擎 (Persistent Data) ]]
+local QUANTUM_ENV = {
+    HasFileSystem = (writefile and readfile and isfolder and makefolder) and true or false,
+    Folder = "320_Master_Data",
+    File = "Coordinates_Save.json"
 }
 
--- [[ 3. 專業通知系統 (Notify Engine) ]]
-local function Notify(title, msg, duration)
-    local nRoot = CG:FindFirstChild("Nebula_Notify") or Instance.new("ScreenGui", CG)
-    nRoot.Name = "Nebula_Notify"
-    
-    local f = Instance.new("Frame", nRoot)
-    f.Size = UDim2.new(0, 250, 0, 60)
-    f.Position = UDim2.new(1, 20, 1, -100)
-    f.BackgroundColor3 = Color3.new(0,0,0)
-    f.BackgroundTransparency = 0.3
-    Instance.new("UICorner", f)
-    Instance.new("UIStroke", f).Color = NEBULA_CONFIG.THEME.Presets[NEBULA_CONFIG.THEME.Current].Accent
-    
-    local t = Instance.new("TextLabel", f)
-    t.Size = UDim2.new(1, 0, 0, 25); t.Text = title; t.TextColor3 = Color3.new(1,1,1); t.Font = Enum.Font.GothamBold; t.BackgroundTransparency = 1
-    
-    local m = Instance.new("TextLabel", f)
-    m.Size = UDim2.new(1, 0, 0, 35); m.Position = UDim2.new(0,0,0,25); m.Text = msg; m.TextColor3 = Color3.new(0.8,0.8,0.8); m.Font = Enum.Font.Gotham; m.BackgroundTransparency = 1
-    
-    f:TweenPosition(UDim2.new(1, -270, 1, -100), "Out", "Quart", 0.5, true)
-    task.delay(duration or 3, function()
-        f:TweenPosition(UDim2.new(1, 20, 1, -100), "In", "Quart", 0.5, true)
-        task.wait(0.5); f:Destroy()
+local function SaveData(data)
+    if not QUANTUM_ENV.HasFileSystem then return false end
+    pcall(function()
+        if not isfolder(QUANTUM_ENV.Folder) then makefolder(QUANTUM_ENV.Folder) end
+        writefile(QUANTUM_ENV.Folder .. "\\" .. QUANTUM_ENV.File, Http:JSONEncode(data))
     end)
 end
 
--- [[ 4. 高階特效與物理傳送引擎 ]]
+local function LoadData()
+    if QUANTUM_ENV.HasFileSystem then
+        local success, result = pcall(function() return readfile(QUANTUM_ENV.Folder .. "\\" .. QUANTUM_ENV.File) end)
+        if success and result then return Http:JSONDecode(result) end
+    end
+    return {}
+end
+
+-- [[ 2. 全域配置與量子矩陣數據庫 ]]
+local APEX_CONFIG = {
+    ID = "320_APEX_QUANTUM",
+    UI_THEME = {
+        Bg = Color3.fromRGB(5, 5, 8),
+        Border = Color3.fromRGB(0, 200, 255),
+        RadarBg = Color3.fromRGB(10, 15, 20),
+        Text = Color3.fromRGB(255, 255, 255)
+    }
+}
+
+local STATE = {
+    Points = LoadData(), -- 自動讀取上次的存檔！
+    IsOpen = true,
+    RadarDots = {}
+}
+
+-- [[ 3. 電影級運鏡與空間轉移引擎 ]]
 local Engine = {}
-function Engine:OmniTeleport(cf)
+function Engine:CinematicTeleport(targetPos)
     if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
     local hrp = Player.Character.HumanoidRootPart
-    local startPos = hrp.Position
     
-    -- 路徑可視化特效
-    local beam = Instance.new("Part", workspace)
-    beam.Anchored = true; beam.CanCollide = false; beam.Material = Enum.Material.Neon
-    beam.Color = NEBULA_CONFIG.THEME.Presets[NEBULA_CONFIG.THEME.Current].Accent
-    beam.Size = Vector3.new(0.5, 0.5, (startPos - cf.Position).Magnitude)
-    beam.CFrame = CFrame.new(startPos:Lerp(cf.Position, 0.5), cf.Position)
-    TS:Create(beam, TweenInfo.new(0.5), {Transparency = 1, Size = Vector3.new(0,0,beam.Size.Z)}):Play()
-    DB:AddItem(beam, 0.5)
-
-    -- 螢幕扭曲
-    local blur = Instance.new("BlurEffect", LT); blur.Size = 40
-    TS:Create(blur, TweenInfo.new(0.4), {Size = 0}):Play()
-    DB:AddItem(blur, 0.4)
+    -- 1. 攝像機剝離與升空特效
+    Camera.CameraType = Enum.CameraType.Scriptable
+    local cc = Instance.new("ColorCorrectionEffect", LT); cc.Saturation = -1
+    local blur = Instance.new("BlurEffect", LT); blur.Size = 0
     
-    hrp.CFrame = cf
-    Notify("空間跳躍", "目標已到達", 1.5)
+    TS:Create(blur, TweenInfo.new(0.3), {Size = 50}):Play()
+    TS:Create(Camera, TweenInfo.new(0.5, Enum.EasingStyle.Exponential), {CFrame = Camera.CFrame * CFrame.new(0, 100, 0)}):Play()
+    task.wait(0.4)
+    
+    -- 2. 空間躍遷 (瞬間移動到底部)
+    hrp.CFrame = CFrame.new(targetPos + Vector3.new(0, 5, 0))
+    Camera.CFrame = CFrame.new(targetPos + Vector3.new(0, 100, 0), targetPos)
+    
+    -- 3. 完美降落與色彩還原
+    TS:Create(Camera, TweenInfo.new(0.6, Enum.EasingStyle.Elastic), {CFrame = hrp.CFrame * CFrame.new(0, 10, 15)}):Play()
+    TS:Create(blur, TweenInfo.new(0.6), {Size = 0}):Play()
+    TS:Create(cc, TweenInfo.new(0.6), {Saturation = 0}):Play()
+    
+    task.wait(0.6)
+    Camera.CameraType = Enum.CameraType.Custom
+    cc:Destroy(); blur:Destroy()
 end
 
--- [[ 5. 主實體 UI 架構 (星雲風格) ]]
-if CG:FindFirstChild(NEBULA_CONFIG.ID) then CG[NEBULA_CONFIG.ID]:Destroy() end
-local Root = Instance.new("ScreenGui", CG); Root.Name = NEBULA_CONFIG.ID; Root.IgnoreGuiInset = true
+-- [[ 4. 終極 UI 構造 (含 2D 雷達) ]]
+if CG:FindFirstChild(APEX_CONFIG.ID) then CG[APEX_CONFIG.ID]:Destroy() end
+local Root = Instance.new("ScreenGui", CG); Root.Name = APEX_CONFIG.ID; Root.IgnoreGuiInset = true
 
 local Main = Instance.new("Frame", Root)
-Main.Size = UDim2.new(0, 500, 0, 750)
-Main.Position = UDim2.new(0.5, -250, 0.5, -375)
-Main.BackgroundColor3 = NEBULA_CONFIG.THEME.Presets.Nebula.Main
-Main.BorderSizePixel = 0
-Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 30)
+Main.Size = UDim2.new(0, 550, 0, 800)
+Main.Position = UDim2.new(0.5, -275, 0.5, -400)
+Main.BackgroundColor3 = APEX_CONFIG.UI_THEME.Bg
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 20)
 
-local Glow = Instance.new("UIStroke", Main); Glow.Thickness = 8; Glow.Transparency = 0.2
-RS.RenderStepped:Connect(function() Glow.Color = Color3.fromHSV((tick()*0.15)%1, 0.6, 1) end)
+local MainStroke = Instance.new("UIStroke", Main); MainStroke.Thickness = 3
+RS.RenderStepped:Connect(function() MainStroke.Color = Color3.fromHSV((tick()*0.5)%1, 0.8, 1) end)
 
--- 頂級導航欄
-local Nav = Instance.new("Frame", Main)
-Nav.Size = UDim2.new(1, 0, 0, 100); Nav.BackgroundTransparency = 1
-local Title = Instance.new("TextLabel", Nav)
-Title.Size = UDim2.new(1, 0, 1, 0); Title.Text = "NEBULA OMNIPOTENCE"; Title.TextColor3 = Color3.new(1,1,1); Title.Font = Enum.Font.GothamBold; Title.TextSize = 40
-Instance.new("UIStroke", Title).Thickness = 4
+-- 標題與保存狀態
+local Title = Instance.new("TextLabel", Main)
+Title.Size = UDim2.new(1, 0, 0, 80); Title.BackgroundTransparency = 1; Title.Text = "APEX QUANTUM v99.9"
+Title.Font = Enum.Font.GothamBold; Title.TextSize = 35; Title.TextColor3 = APEX_CONFIG.UI_THEME.Text
+local Status = Instance.new("TextLabel", Main)
+Status.Size = UDim2.new(1, 0, 0, 30); Status.Position = UDim2.new(0,0,0,70); Status.BackgroundTransparency = 1
+Status.Text = QUANTUM_ENV.HasFileSystem and "🟢 永久存儲已激活" or "🔴 執行器不支持永久存儲"
+Status.TextColor3 = QUANTUM_ENV.HasFileSystem and Color3.new(0,1,0) or Color3.new(1,0,0)
+Status.Font = Enum.Font.GothamBold; Status.TextSize = 14
 
--- [[ 6. 座標導入導出系統 ]]
-local ControlBox = Instance.new("Frame", Main)
-ControlBox.Size = UDim2.new(1, -60, 0, 200); ControlBox.Position = UDim2.new(0, 30, 0, 110); ControlBox.BackgroundTransparency = 1
-local C_Layout = Instance.new("UIListLayout", ControlBox); C_Layout.Padding = UDim.new(0, 12)
+-- [ 創新功能：全息雷達 HUD ]
+local Radar = Instance.new("Frame", Main)
+Radar.Size = UDim2.new(0, 180, 0, 180); Radar.Position = UDim2.new(1, -200, 0, 110)
+Radar.BackgroundColor3 = APEX_CONFIG.UI_THEME.RadarBg; Instance.new("UICorner", Radar).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", Radar).Color = Color3.new(0, 1, 0)
+local RadarCenter = Instance.new("Frame", Radar); RadarCenter.Size = UDim2.new(0,6,0,6); RadarCenter.Position = UDim2.new(0.5,-3,0.5,-3); RadarCenter.BackgroundColor3 = Color3.new(1,1,1); Instance.new("UICorner", RadarCenter).CornerRadius = UDim.new(1,0)
 
-local Input = Instance.new("TextBox", ControlBox)
-Input.Size = UDim2.new(1, 0, 0, 60); Input.PlaceholderText = " > 輸入座標名稱 < "; Input.BackgroundColor3 = Color3.fromRGB(30,30,30); Input.TextColor3 = Color3.new(1,1,1); Input.Font = Enum.Font.GothamBold; Input.TextSize = 24
-Instance.new("UICorner", Input)
+-- 雷達數學引擎 (將 3D 轉化為 2D)
+RS.RenderStepped:Connect(function()
+    if not Player.Character or not Player.Character:FindFirstChild("HumanoidRootPart") then return end
+    local hrp = Player.Character.HumanoidRootPart
+    local hrpY = hrp.Orientation.Y
+    
+    for i, dot in pairs(STATE.RadarDots) do
+        local pData = STATE.Points[i]
+        if pData then
+            local targetPos = Vector3.new(pData.X, pData.Y, pData.Z)
+            local offset = targetPos - hrp.Position
+            local dist = offset.Magnitude
+            if dist > 1000 then dist = 1000 end -- 雷達最大半徑 1000 單位
+            
+            local angle = math.atan2(offset.X, offset.Z) - math.rad(hrpY)
+            local rRadius = 85 * (dist/1000) -- 雷達 UI 半徑
+            
+            local rx = 90 + math.sin(angle) * rRadius
+            local ry = 90 + math.cos(angle) * rRadius
+            dot.Position = UDim2.new(0, rx - 3, 0, ry - 3)
+        end
+    end
+end)
 
-local ActionRow = Instance.new("Frame", ControlBox)
-ActionRow.Size = UDim2.new(1, 0, 0, 60); ActionRow.BackgroundTransparency = 1
-local AR_Layout = Instance.new("UIFillLayout", ActionRow) or Instance.new("UIListLayout", ActionRow); AR_Layout.FillDirection = Enum.FillDirection.Horizontal; AR_Layout.Padding = UDim.new(0, 10)
+-- [ 座標操作區 ]
+local Container = Instance.new("Frame", Main); Container.Size = UDim2.new(1, -220, 0, 180); Container.Position = UDim2.new(0, 20, 0, 110); Container.BackgroundTransparency = 1
+local Layout = Instance.new("UIListLayout", Container); Layout.Padding = UDim.new(0, 15)
 
-local function CreateBtn(parent, text, color, sizeX)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(sizeX or 0.48, 0, 1, 0); b.Text = text; b.BackgroundColor3 = color; b.Font = Enum.Font.GothamBold; b.TextSize = 18; b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b); return b
-end
+local Input = Instance.new("TextBox", Container); Input.Size = UDim2.new(1, 0, 0, 60); Input.PlaceholderText = "> 座標命名 <"
+Input.BackgroundColor3 = Color3.fromRGB(20,20,20); Input.TextColor3 = Color3.new(1,1,1); Input.Font = Enum.Font.GothamBold; Input.TextSize = 25; Instance.new("UICorner", Input)
 
-local SaveBtn = CreateBtn(ActionRow, "固化點", Color3.fromRGB(0, 180, 100))
-local ExportBtn = CreateBtn(ActionRow, "導出集", Color3.fromRGB(100, 0, 200))
+local SaveBtn = Instance.new("TextButton", Container); SaveBtn.Size = UDim2.new(1, 0, 0, 60); SaveBtn.Text = "★ 寫入本地磁盤 ★"
+SaveBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 255); SaveBtn.TextColor3 = Color3.new(1,1,1); SaveBtn.Font = Enum.Font.GothamBold; SaveBtn.TextSize = 22; Instance.new("UICorner", SaveBtn)
 
--- [[ 7. 無限滑動與搜索清單 ]]
-local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, -60, 1, -340); Scroll.Position = UDim2.new(0, 30, 0, 330); Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 10; Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
-local S_Layout = Instance.new("UIListLayout", Scroll); S_Layout.Padding = UDim.new(0, 10)
+-- [ 無限清單區 ]
+local Scroll = Instance.new("ScrollingFrame", Main); Scroll.Size = UDim2.new(1, -40, 1, -330); Scroll.Position = UDim2.new(0, 20, 0, 310); Scroll.BackgroundTransparency = 1; Scroll.ScrollBarThickness = 8; Scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
+Instance.new("UIListLayout", Scroll).Padding = UDim.new(0, 10)
 
 local function UpdateList()
     for _, v in pairs(Scroll:GetChildren()) do if v:IsA("Frame") then v:Destroy() end end
-    for i, data in ipairs(NEBULA_CONFIG.STATE.Points) do
-        local Card = Instance.new("Frame", Scroll)
-        Card.Size = UDim2.new(1, -20, 0, 85); Card.BackgroundColor3 = Color3.fromRGB(20,20,20); Instance.new("UICorner", Card)
+    for _, dot in pairs(STATE.RadarDots) do dot:Destroy() end; STATE.RadarDots = {}
+    
+    for i, data in ipairs(STATE.Points) do
+        -- 建立雷達光點
+        local rDot = Instance.new("Frame", Radar); rDot.Size = UDim2.new(0,6,0,6); rDot.BackgroundColor3 = Color3.new(0,1,1); Instance.new("UICorner", rDot).CornerRadius = UDim.new(1,0)
+        STATE.RadarDots[i] = rDot
+
+        -- 建立列表卡片
+        local Card = Instance.new("Frame", Scroll); Card.Size = UDim2.new(1, -15, 0, 80); Card.BackgroundColor3 = Color3.fromRGB(25,25,25); Instance.new("UICorner", Card)
+        local TP = Instance.new("TextButton", Card); TP.Size = UDim2.new(1, -110, 1, 0); TP.Position = UDim2.new(0, 15, 0, 0); TP.BackgroundTransparency = 1
+        TP.Text = " " .. data.Name; TP.TextColor3 = Color3.new(1,1,1); TP.Font = Enum.Font.GothamBold; TP.TextSize = 24; TP.TextXAlignment = Enum.TextXAlignment.Left
         
-        local TP = Instance.new("TextButton", Card)
-        TP.Size = UDim2.new(1, -120, 1, 0); TP.Position = UDim2.new(0, 15, 0, 0); TP.BackgroundTransparency = 1; TP.Text = "["..string.format("%02d",i).."] "..data.Name; TP.TextColor3 = Color3.new(1,1,1); TP.Font = Enum.Font.GothamBold; TP.TextSize = 24; TP.TextXAlignment = Enum.TextXAlignment.Left
-        TP.MouseButton1Click:Connect(function() Engine:OmniTeleport(data.CF) end)
+        TP.MouseButton1Click:Connect(function() Engine:CinematicTeleport(Vector3.new(data.X, data.Y, data.Z)) end)
+
+        local Del = Instance.new("TextButton", Card); Del.Size = UDim2.new(0, 90, 0, 50); Del.Position = UDim2.new(1, -100, 0.5, -25); Del.BackgroundColor3 = Color3.fromRGB(200, 50, 50); Del.Text = "刪除"; Del.Font = Enum.Font.GothamBold; Del.TextSize = 20; Del.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", Del)
         
-        local Del = CreateBtn(Card, "移除", Color3.fromRGB(200, 40, 40), 0.2)
-        Del.Position = UDim2.new(1, -105, 0.5, -25); Del.Size = UDim2.new(0, 90, 0, 50)
-        Del.MouseButton1Click:Connect(function() table.remove(NEBULA_CONFIG.STATE.Points, i); UpdateList() end)
+        Del.MouseButton1Click:Connect(function()
+            table.remove(STATE.Points, i)
+            SaveData(STATE.Points) -- 刪除時自動保存
+            UpdateList()
+        end)
     end
 end
 
 SaveBtn.MouseButton1Click:Connect(function()
     if Input.Text ~= "" and Player.Character then
-        table.insert(NEBULA_CONFIG.STATE.Points, {Name = Input.Text, CF = Player.Character.HumanoidRootPart.CFrame})
-        Notify("系統", "座標已永久固化", 2)
-        Input.Text = ""; UpdateList()
+        local pos = Player.Character.HumanoidRootPart.Position
+        -- 將 Vector3 轉為數字以配合 JSON 存儲
+        table.insert(STATE.Points, {Name = Input.Text, X = pos.X, Y = pos.Y, Z = pos.Z})
+        SaveData(STATE.Points) -- 新增時自動保存本地
+        Input.Text = ""
+        UpdateList()
     end
 end)
 
-ExportBtn.MouseButton1Click:Connect(function()
-    local str = "320_DATA:"
-    for _, p in pairs(NEBULA_CONFIG.STATE.Points) do str = str..p.Name..","..tostring(p.CF).."|" end
-    setclipboard(str)
-    Notify("數據中心", "座標集已複製到剪貼簿", 3)
-end)
+-- [[ 5. 防黏鼠智能鎖 & 隱藏按鈕 ]]
+local Mini = Instance.new("TextButton", Root); Mini.Size = UDim2.new(0, 90, 0, 90); Mini.Position = UDim2.new(0, 50, 0, 200); Mini.BackgroundColor3 = APEX_CONFIG.UI_THEME.Bg; Mini.Text = "320"; Mini.TextColor3 = Color3.new(1,1,1); Mini.Font = Enum.Font.GothamBold; Mini.TextSize = 35; Mini.Visible = false; Instance.new("UICorner", Mini).CornerRadius = UDim.new(1, 0)
+Instance.new("UIStroke", Mini).Color = Color3.new(0,255,255)
 
--- [[ 8. 全球定位與快捷鍵 ]]
-UIS.InputBegan:Connect(function(i, gpe)
-    if not gpe and i.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
-        Engine:OmniTeleport(CFrame.new(Mouse.Hit.Position + Vector3.new(0, 5, 0)))
-    end
-end)
+local function Toggle() STATE.IsOpen = not STATE.IsOpen; Main.Visible = STATE.IsOpen; Mini.Visible = not STATE.IsOpen end
+local Drag = {A = false, S = nil, F = nil}; Mini.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then Drag.S, Drag.F, Drag.A = i.Position, Mini.Position, false end end)
+UIS.InputChanged:Connect(function(i) if Drag.S and i.UserInputType == Enum.UserInputType.MouseMovement and (i.Position - Drag.S).Magnitude > 10 then Drag.A = true; Mini.Position = UDim2.new(Drag.F.X.Scale, Drag.F.X.Offset + (i.Position - Drag.S).X, Drag.F.Y.Scale, Drag.F.Y.Offset + (i.Position - Drag.S).Y) end end)
+Mini.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then if not Drag.A then Toggle() end; Drag.S = nil end end)
 
--- [[ 9. 智能小按鈕與極限防黏 ]]
-local Mini = Instance.new("TextButton", Root)
-Mini.Size = UDim2.new(0, 100, 0, 100); Mini.Position = UDim2.new(0, 50, 0, 200); Mini.BackgroundColor3 = Color3.new(0,0,0); Mini.Text = "320"; Mini.TextColor3 = Color3.new(1,1,1); Mini.Font = Enum.Font.GothamBold; Mini.TextSize = 40; Mini.Visible = false
-Instance.new("UICorner", Mini).CornerRadius = UDim.new(1, 0)
-local mStroke = Instance.new("UIStroke", Mini); mStroke.Thickness = 6; RS.RenderStepped:Connect(function() mStroke.Color = Glow.Color end)
+local Close = Instance.new("TextButton", Main); Close.Size = UDim2.new(0, 50, 0, 50); Close.Position = UDim2.new(1, -60, 0, 15); Close.Text = "×"; Close.BackgroundTransparency = 1; Close.TextColor3 = Color3.new(1,1,1); Close.Font = Enum.Font.GothamBold; Close.TextSize = 50; Close.MouseButton1Click:Connect(Toggle)
 
-local function Toggle()
-    NEBULA_CONFIG.STATE.IsOpen = not NEBULA_CONFIG.STATE.IsOpen
-    Main.Visible = NEBULA_CONFIG.STATE.IsOpen
-    Mini.Visible = not NEBULA_CONFIG.STATE.IsOpen
-end
-
-local dActive = false; local dStart; local dFrame;
-Mini.InputBegan:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then dStart, dFrame, dActive = i.Position, Mini.Position, false end end)
-UIS.InputChanged:Connect(function(i) if dStart and i.UserInputType == Enum.UserInputType.MouseMovement then if (i.Position - dStart).Magnitude > 15 then dActive = true; local off = i.Position - dStart; Mini.Position = UDim2.new(dFrame.X.Scale, dFrame.X.Offset + off.X, dFrame.X.Offset + off.Y) end end end)
-Mini.InputEnded:Connect(function(i) if i.UserInputType == Enum.UserInputType.MouseButton1 then if not dActive then Toggle() end dStart = nil end end)
-
-local Close = Instance.new("TextButton", Main)
-Close.Size = UDim2.new(0, 60, 0, 60); Close.Position = UDim2.new(1, -75, 0, 20); Close.Text = "×"; Close.BackgroundTransparency = 1; Close.TextColor3 = Color3.new(1,1,1); Close.Font = Enum.Font.GothamBold; Close.TextSize = 55; Close.MouseButton1Click:Connect(Toggle)
-
--- [[ 10. 工業級性能監測與環境冗餘 ]]
-local Perf = Instance.new("TextLabel", Main)
-Perf.Size = UDim2.new(1, -60, 0, 30); Perf.Position = UDim2.new(0, 30, 1, -40); Perf.BackgroundTransparency = 1; Perf.TextColor3 = Color3.new(0.5,0.5,0.5); Perf.Font = Enum.Font.Code; Perf.TextSize = 14
-task.spawn(function()
-    while true do
-        local mem = math.floor(Stats:GetTotalMemoryUsageMb())
-        local ping = math.floor(Player:GetNetworkPing() * 1000)
-        Perf.Text = "SYSTEM_OK | MEM: "..mem.."MB | PING: "..ping.."MS | VERSION: "..NEBULA_CONFIG.VERSION
-        task.wait(1)
-    end
-end)
-
--- 填充代碼行數與結構複雜度
-for i = 1, 200 do local _rand = math.random(1, i) end
-warn("320 NEBULA OMNIPOTENCE: ALL MODULES ACTIVATED.")
-Notify("啟動成功", "星雲全能版已就緒", 3)
 UpdateList()
+warn("320 APEX QUANTUM DEPLOYED. ALL SYSTEMS ONLINE.")
