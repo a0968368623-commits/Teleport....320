@@ -1,18 +1,23 @@
--- [[ 320 MASTER - PHANTOM FULL V5 ]]
+-- [[ 320 MASTER - PHANTOM RGB GHOST V6 ]]
 
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
 local PLS = game:GetService("Players")
 local CG = game:GetService("CoreGui")
+local Workspace = game:GetService("Workspace")
 
 local Player = PLS.LocalPlayer
 local Mouse = Player:GetMouse()
+local Camera = Workspace.CurrentCamera
 
 local STATE = {
     Points = {},
     Visible = true,
     E_KeyEnabled = true,
-    TargetPlayerName = ""
+    TargetPlayerName = "",
+    GhostMode = false,
+    GhostPart = nil,
+    GhostLoop = nil
 }
 
 local function Teleport(cf)
@@ -31,6 +36,53 @@ local function GetTargetPlayer(str)
         end
     end
     return nil
+end
+
+-- 隱身/幽靈觀戰核心邏輯 (H 鍵開關)
+local function ToggleGhostMode()
+    local char = Player.Character
+    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if not hrp or not hum then return end
+
+    STATE.GhostMode = not STATE.GhostMode
+
+    if STATE.GhostMode then
+        -- 啟動隱身：建立一個隱形方塊當作臨時靈魂核心
+        local ghost = Instance.new("Part")
+        ghost.Size = Vector3.new(1, 1, 1)
+        ghost.Transparency = 1
+        ghost.Anchored = true
+        ghost.CanCollide = false
+        ghost.CFrame = hrp.CFrame
+        ghost.Parent = Workspace
+        STATE.GhostPart = ghost
+        
+        Camera.CameraSubject = ghost
+
+        -- 持續將肉體傳送到地底下，並把靈魂核心綁定在鍵盤控制上
+        STATE.GhostLoop = RS.RenderStepped:Connect(function()
+            if char and hrp and STATE.GhostPart then
+                hrp.CFrame = CFrame.new(STATE.GhostPart.Position.X, -500, STATE.GhostPart.Position.Z)
+                hrp.Velocity = Vector3.new(0,0,0)
+                
+                -- 讓玩家可以用 WASD 操控這個隱形核心移動
+                local moveDir = hum.MoveDirection
+                STATE.GhostPart.CFrame = STATE.GhostPart.CFrame + (moveDir * 1.5)
+            end
+        end)
+    else
+        -- 關閉隱身：肉體瞬間歸位到靈魂核心的位置
+        if STATE.GhostLoop then STATE.GhostLoop:Disconnect(); STATE.GhostLoop = nil end
+        if STATE.GhostPart then
+            local finalCF = STATE.GhostPart.CFrame
+            STATE.GhostPart:Destroy()
+            STATE.GhostPart = nil
+            
+            Teleport(finalCF)
+            Camera.CameraSubject = hum
+        end
+    end
 end
 
 local function EnableDrag(obj, parent)
@@ -55,16 +107,20 @@ local function EnableDrag(obj, parent)
     end)
 end
 
-local ID = "320_HUB_V5_FINAL"
+local ID = "320_HUB_V6_RGB"
 if CG:FindFirstChild(ID) then CG[ID]:Destroy() end
 local Root = Instance.new("ScreenGui", CG); Root.Name = ID
 
 local Main = Instance.new("Frame", Root)
-Main.Size = UDim2.new(0, 360, 0, 520)
-Main.Position = UDim2.new(0.5, -180, 0.5, -260)
+Main.Size = UDim2.new(0, 360, 0, 560) -- 稍微加高 UI 容納新狀態
+Main.Position = UDim2.new(0.5, -180, 0.5, -280)
 Main.BackgroundColor3 = Color3.fromRGB(18, 18, 22)
 Main.Visible = true
 Instance.new("UICorner", Main)
+
+local MainStroke = Instance.new("UIStroke", Main)
+MainStroke.Thickness = 2
+MainStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
 
 local ToggleBtn = Instance.new("TextButton", Root)
 ToggleBtn.Size = UDim2.new(0, 55, 0, 55)
@@ -77,6 +133,9 @@ ToggleBtn.TextSize = 16
 Instance.new("UICorner", ToggleBtn, {CornerRadius = UDim.new(1, 0)})
 EnableDrag(ToggleBtn, ToggleBtn)
 
+local BallStroke = Instance.new("UIStroke", ToggleBtn)
+BallStroke.Thickness = 2
+
 local Header = Instance.new("Frame", Main)
 Header.Size = UDim2.new(1, 0, 0, 50)
 Header.BackgroundColor3 = Color3.fromRGB(30, 30, 35)
@@ -85,14 +144,14 @@ EnableDrag(Header, Main)
 
 local Title = Instance.new("TextLabel", Header)
 Title.Size = UDim2.new(1, 0, 1, 0)
-Title.Text = "320 PHANTOM V5"
+Title.Text = "320 PHANTOM GHOST"
 Title.TextColor3 = Color3.new(1,1,1)
 Title.BackgroundTransparency = 1
 Title.Font = Enum.Font.GothamBold
 Title.TextSize = 18
 
 local Scroll = Instance.new("ScrollingFrame", Main)
-Scroll.Size = UDim2.new(1, -20, 1, -230)
+Scroll.Size = UDim2.new(1, -20, 1, -270)
 Scroll.Position = UDim2.new(0, 10, 0, 60)
 Scroll.BackgroundTransparency = 1
 Scroll.AutomaticCanvasSize = "Y"
@@ -114,8 +173,8 @@ local function TeleportToTarget()
 end
 
 local ControlPanel = Instance.new("Frame", Main)
-ControlPanel.Size = UDim2.new(1, -20, 0, 150)
-ControlPanel.Position = UDim2.new(0, 10, 1, -160)
+ControlPanel.Size = UDim2.new(1, -20, 0, 200)
+ControlPanel.Position = UDim2.new(0, 10, 1, -210)
 ControlPanel.BackgroundTransparency = 1
 
 local E_Toggle = Instance.new("TextButton", ControlPanel)
@@ -216,18 +275,51 @@ SaveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- 100% 替換為 E 鍵，且輸入框為空時絕對不觸發任何傳送
+-- 新增：UI 上的 Ghost 模式手動開關按框
+local GhostToggleBtn = Instance.new("TextButton", ControlPanel)
+GhostToggleBtn.Size = UDim2.new(1, 0, 0, 40)
+GhostToggleBtn.Position = UDim2.new(0, 0, 0, 150)
+GhostToggleBtn.Text = "Ghost Mode (H): OFF"
+GhostToggleBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 65)
+GhostToggleBtn.TextColor3 = Color3.new(1,1,1)
+GhostToggleBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", GhostToggleBtn)
+
+local function UpdateGhostUI()
+    GhostToggleBtn.Text = "Ghost Mode (H): " .. (STATE.GhostMode and "ON" or "OFF")
+    GhostToggleBtn.BackgroundColor3 = STATE.GhostMode and Color3.fromRGB(255, 165, 0) or Color3.fromRGB(60, 60, 65)
+end
+
+GhostToggleBtn.MouseButton1Click:Connect(function()
+    ToggleGhostMode()
+    UpdateGhostUI()
+end)
+
+-- 鍵盤與滑鼠監聽
+UIS.InputBegan:Connect(function(input, gpe)
+    if not gpe and input.KeyCode == Enum.KeyCode.H then
+        ToggleGhostMode()
+        UpdateGhostUI()
+    end
+end)
+
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and STATE.E_KeyEnabled and input.KeyCode == Enum.KeyCode.E then
         TeleportToTarget()
     end
 end)
 
--- 唯一保留的滑鼠閃現方式：Ctrl + 滑鼠左鍵點擊
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and input.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
         Teleport(CFrame.new(Mouse.Hit.Position))
     end
 end)
 
-print("320 PHANTOM V5 SUCCESS")
+RS.RenderStepped:Connect(function()
+    local hue = (tick() % 4) / 4
+    local rgbColor = Color3.fromHSV(hue, 1, 1)
+    MainStroke.Color = rgbColor
+    BallStroke.Color = rgbColor
+end)
+
+print("320 PHANTOM GHOST V6 SUCCESS")
