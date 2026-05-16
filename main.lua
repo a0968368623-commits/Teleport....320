@@ -1,4 +1,4 @@
--- [[ 320 MASTER - PHANTOM CORE PURE ]]
+-- [[ 320 MASTER - PHANTOM CORE E-KEY STRICT ]]
 
 local UIS = game:GetService("UserInputService")
 local RS = game:GetService("RunService")
@@ -11,7 +11,7 @@ local Mouse = Player:GetMouse()
 local STATE = {
     Points = {},
     Visible = true,
-    F_KeyEnabled = true,
+    E_KeyEnabled = true,
     TargetPlayerName = ""
 }
 
@@ -85,23 +85,22 @@ local function TeleportToTarget()
         local targetHRP = tPlayer.Character.HumanoidRootPart
         local behindCF = targetHRP.CFrame * CFrame.new(0, 0, 3) 
         Teleport(behindCF)
-    else
-        Teleport(CFrame.new(Mouse.Hit.Position))
     end
+    -- ⚠️ 已修改：如果輸入框為空，這裡不會執行任何滑鼠閃現
 end
 
 local ControlPanel = Instance.new("Frame", Main)
 ControlPanel.Size = UDim2.new(1, -20, 0, 150); ControlPanel.Position = UDim2.new(0, 10, 1, -160); ControlPanel.BackgroundTransparency = 1
 
-local F_Toggle = Instance.new("TextButton", ControlPanel)
-F_Toggle.Size = UDim2.new(1, 0, 0, 40); F_Toggle.Position = UDim2.new(0, 0, 0, 0)
-F_Toggle.Text = "F Key Teleport: ON"; F_Toggle.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
-F_Toggle.TextColor3 = Color3.new(1,1,1); F_Toggle.Font = Enum.Font.GothamBold; Instance.new("UICorner", F_Toggle)
+local E_Toggle = Instance.new("TextButton", ControlPanel)
+E_Toggle.Size = UDim2.new(1, 0, 0, 40); E_Toggle.Position = UDim2.new(0, 0, 0, 0)
+E_Toggle.Text = "E Key Teleport: ON"; E_Toggle.BackgroundColor3 = Color3.fromRGB(0, 180, 100)
+E_Toggle.TextColor3 = Color3.new(1,1,1); E_Toggle.Font = Enum.Font.GothamBold; Instance.new("UICorner", E_Toggle)
 
-F_Toggle.MouseButton1Click:Connect(function()
-    STATE.F_KeyEnabled = not STATE.F_KeyEnabled
-    F_Toggle.Text = "F Key Teleport: " .. (STATE.F_KeyEnabled and "ON" or "OFF")
-    F_Toggle.BackgroundColor3 = STATE.F_KeyEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(60, 60, 65)
+E_Toggle.MouseButton1Click:Connect(function()
+    STATE.E_KeyEnabled = not STATE.E_KeyEnabled
+    E_Toggle.Text = "E Key Teleport: " .. (STATE.E_KeyEnabled and "ON" or "OFF")
+    E_Toggle.BackgroundColor3 = STATE.E_KeyEnabled and Color3.fromRGB(0, 180, 100) or Color3.fromRGB(60, 60, 65)
 end)
 
 local PlayerInput = Instance.new("TextBox", ControlPanel)
@@ -152,12 +151,14 @@ SaveBtn.MouseButton1Click:Connect(function()
     end
 end)
 
+-- E 鍵監聽 (嚴格限定：必須找到指定玩家名字才觸發)
 UIS.InputBegan:Connect(function(input, gpe)
-    if not gpe and STATE.F_KeyEnabled and input.KeyCode == Enum.KeyCode.F then
+    if not gpe and STATE.E_KeyEnabled and input.KeyCode == Enum.KeyCode.E then
         TeleportToTarget()
     end
 end)
 
+-- Ctrl + 滑鼠左鍵點擊傳送 (唯一保留的滑鼠閃現方式)
 UIS.InputBegan:Connect(function(input, gpe)
     if not gpe and input.UserInputType == Enum.UserInputType.MouseButton1 and UIS:IsKeyDown(Enum.KeyCode.LeftControl) then
         Teleport(CFrame.new(Mouse.Hit.Position))
